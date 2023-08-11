@@ -1,18 +1,24 @@
 using System.Net;
-using Exoscan.Core;
-using Exoscan.Core.Builders;
-using Exoscan.Domain.Selectors;
+using WebReaper.Builders;
+using WebReaper.Core;
+using WebReaper.Domain.Selectors;
 
 namespace BrownsfashionScraper
 {
     public class ScrapingWorker : BackgroundService
     {
-        private ScraperEngine scraper;
+        private readonly ILogger<ScrapingWorker> _logger;
+        private ScraperEngine _scraper;
 
         public ScrapingWorker(ILogger<ScrapingWorker> logger)
         {
-            scraper = new ScraperEngineBuilder()
-                .WithLogger(logger)
+            _logger = logger;
+        }
+
+        public override async Task StartAsync(CancellationToken cancellationToken)
+        {
+             _scraper = await new ScraperEngineBuilder()
+                .WithLogger(_logger)
                 .SetCookies(cookies =>
                 {
                     cookies.Add(new CookieCollection
@@ -63,14 +69,14 @@ namespace BrownsfashionScraper
                     new("subcategory2", "#modal-controller-container > main > nav > ol > li:nth-child(3) > a]"),
 
                 })
-                .WriteToCsvFile("result.csv")
-                .WithLogger(logger)
-                .Build();
+                .WriteToCsvFile("result.csv", true)
+                .WithParallelismDegree(10)
+                .BuildAsync();
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            await scraper.Run(10);
+            await _scraper.RunAsync(stoppingToken);
         }
     }
 }
